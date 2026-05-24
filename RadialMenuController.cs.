@@ -1,0 +1,97 @@
+using System;
+
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine("--- Echo-Architect UI Simulator ---\n");
+        RadialMenuController radialMenu = new RadialMenuController();
+        
+        // --- SIMULATION 1: Player swipes UP and RIGHT ---
+        Console.WriteLine("Action: Player holds finger on the screen.");
+        radialMenu.OpenMenu(touchX: 0, touchY: 0); // Origin point
+        
+        Console.WriteLine("Action: Player drags finger UP-RIGHT and releases.");
+        string tool1 = radialMenu.ReleaseAndSelect(releaseX: 50, releaseY: 50); 
+        Console.WriteLine($"Result: Tool Selected -> {tool1}\n");
+
+        // --- SIMULATION 2: Player swipes LEFT ---
+        Console.WriteLine("Action: Player holds finger on the screen.");
+        radialMenu.OpenMenu(touchX: 100, touchY: 100); 
+        
+        Console.WriteLine("Action: Player drags finger sharply LEFT and releases.");
+        string tool2 = radialMenu.ReleaseAndSelect(releaseX: -50, releaseY: 100); 
+        Console.WriteLine($"Result: Tool Selected -> {tool2}\n");
+
+        // --- SIMULATION 3: Player cancels ---
+        Console.WriteLine("Action: Player holds finger, but releases without dragging.");
+        radialMenu.OpenMenu(touchX: 50, touchY: 50); 
+        string tool3 = radialMenu.ReleaseAndSelect(releaseX: 52, releaseY: 51); // Barely moved
+        Console.WriteLine($"Result: Tool Selected -> {tool3}\n");
+    }
+}
+
+public class RadialMenuController
+{
+    // The "Petals" of our bloom menu
+    public string[] MenuItems = { "Scanner", "Seeds", "Water Tools", "Terraform", "Social Beacon" };
+    
+    private float _originX;
+    private float _originY;
+    private bool _isOpen;
+
+    /// <summary>
+    /// Triggered when the player presses and holds the screen.
+    /// </summary>
+    public void OpenMenu(float touchX, float touchY)
+    {
+        _originX = touchX;
+        _originY = touchY;
+        _isOpen = true;
+        Console.WriteLine($"[UI Graphic] Radial Wheel BLOOMS at coordinates ({touchX}, {touchY}).");
+    }
+
+    /// <summary>
+    /// Triggered when the player lifts their finger off the screen.
+    /// Calculates the math to figure out which pie-slice they dragged into.
+    /// </summary>
+    public string ReleaseAndSelect(float releaseX, float releaseY)
+    {
+        if (!_isOpen) return "Menu is closed.";
+
+        // 1. Calculate the distance the finger dragged (Pythagorean theorem)
+        double deltaX = releaseX - _originX;
+        double deltaY = releaseY - _originY;
+        double distance = Math.Sqrt((deltaX * deltaX) + (deltaY * deltaY));
+
+        // 2. The "Inner Core" Deadzone logic
+        if (distance < 15.0) 
+        {
+            _isOpen = false;
+            Console.WriteLine("[UI Graphic] Radial Wheel folds back up.");
+            return "None. (Cancelled in center deadzone)";
+        }
+
+        // 3. Calculate the exact angle of the swipe in degrees
+        double angleInRadians = Math.Atan2(deltaY, deltaX);
+        double angleInDegrees = angleInRadians * (180 / Math.PI);
+        
+        // Normalize the angle to be between 0 and 360 degrees
+        if (angleInDegrees < 0) 
+        {
+            angleInDegrees += 360; 
+        }
+
+        // 4. Divide 360 degrees by the number of menu items to get the size of each "slice"
+        double sliceSize = 360.0 / MenuItems.Length;
+
+        // 5. Figure out which slice the angle falls into
+        int selectedIndex = (int)(angleInDegrees / sliceSize);
+
+        _isOpen = false;
+        Console.WriteLine($"[Debug] Swipe Angle: {Math.Round(angleInDegrees)} degrees. Slice Index: {selectedIndex}");
+        Console.WriteLine("[UI Graphic] Radial Wheel closes with a satisfying haptic snap.");
+        
+        return MenuItems[selectedIndex];
+    }
+}
